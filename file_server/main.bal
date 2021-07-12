@@ -57,7 +57,7 @@ service /files on new http:Listener(9090) {
         return outResponse;
     }
 
-    resource function post fileUpload(http:Caller caller, http:Request request) returns http:Ok|error? {
+    resource function post imageUpload(http:Caller caller, http:Request request) returns http:Ok|error? {
         http:Request clientRequest = new;
         string uuidString = uuid:createType4AsString();
         stream<byte[], io:Error?> streamer = check request.getByteStream();
@@ -77,14 +77,14 @@ service /files on new http:Listener(9090) {
 
     }
 
-    resource function delete fileDelete(http:Caller caller, http:Request request, @http:Payload json payload) returns 
+    resource function delete imageDelete(http:Caller caller, http:Request request) returns 
     http:Ok|http:BadRequest|http:InternalServerError|error? {
-        string|error fileName = <string|error>payload.fileName;
-        if (fileName is error) {
+        string? fileName = request.getQueryParamValue("fileName");
+        if (fileName is ()) {
             http:BadRequest badRequest = {body: "File name is missing in request body."};
             return badRequest;
         } else {
-            error? err = file:remove(fileName);
+            error? err = file:remove("./files/"+fileName);
             if (err is error) {
                 http:InternalServerError errorResponse = {body: {
                         "success": false,
@@ -97,7 +97,7 @@ service /files on new http:Listener(9090) {
                         "success": true,
                         "message": "Successfully deleted image!"
                     }};
-
+                return errorResponse;
             }
         }
 
