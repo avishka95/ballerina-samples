@@ -46,7 +46,12 @@ string baseDirectory = "/Users/avishkaariyaratne/Desktop/github/ballerina-sample
         maxAge: 84900
     }}
 service /files on new http:Listener(9090) {
-    resource function get image/[string fileName]() returns http:Response|error {
+    resource function get image/[string fileName]() returns http:Response| http:NotFound |error {
+        boolean|error fileExists = file:test(baseDirectory + fileName, file:EXISTS);
+        if(fileExists is error || !fileExists){
+            http:NotFound notFoundResponse = {body: "Image not found!"};
+            return notFoundResponse;
+        }
 
         //validate request here, return if unahthorized.
         http:Response outResponse = new;
@@ -63,7 +68,7 @@ service /files on new http:Listener(9090) {
         stream<byte[], io:Error?> streamer = check request.getByteStream();
         string fileName = uuidString + ".jpg";
 
-        check io:fileWriteBlocksFromStream("./files/" + fileName, streamer);
+        check io:fileWriteBlocksFromStream(baseDirectory + fileName, streamer);
         http:Ok okResponse = {
             body: {
                 "success": true,
@@ -84,7 +89,7 @@ service /files on new http:Listener(9090) {
             http:BadRequest badRequest = {body: "File name is missing in request body."};
             return badRequest;
         } else {
-            error? err = file:remove("./files/"+fileName);
+            error? err = file:remove(baseDirectory+fileName);
             if (err is error) {
                 http:InternalServerError errorResponse = {body: {
                         "success": false,
