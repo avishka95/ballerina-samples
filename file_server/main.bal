@@ -2,6 +2,7 @@ import ballerina/http;
 import ballerina/io;
 import ballerina/mime;
 import ballerina/file;
+// import ballerina/lang.array;
 import ballerina/uuid;
 
 map<string|string[]> headers = {
@@ -13,32 +14,6 @@ map<string|string[]> headers = {
 http:Client clientEndpoint = check new ("http://localhost:9090");
 string baseDirectory = "/Users/avishkaariyaratne/Desktop/github/ballerina-samples/file_server/tests/files/";
 
-// service /'stream on new http:Listener(9090) {
-// string uuid4String = uuid:createType4AsString();
-
-//     resource function get fileupload() returns http:Response|error? {
-//         http:Request request = new;
-
-//         request.setFileAsPayload("./files/BallerinaLang.pdf",
-//             contentType = mime:APPLICATION_PDF);
-
-//         http:Response clientResponse =
-//             check clientEndpoint->post("/stream/receiver", request);
-
-//         return clientResponse;
-//     }
-
-//     resource function post receiver(http:Caller caller,
-//                                     http:Request request) returns error? {
-
-//         stream<byte[], io:Error?> streamer = check request.getByteStream();
-
-//         check io:fileWriteBlocksFromStream(
-//                                     "./files/ReceivedFile.pdf", streamer);
-//         check streamer.close();
-//         check caller->respond("File Received!");
-//     }
-// }
 @http:ServiceConfig {cors: {
         allowOrigins: ["*"],
         allowCredentials: false,
@@ -56,18 +31,18 @@ service /files on new http:Listener(9090) {
         //validate request here, return if unahthorized.
         http:Response outResponse = new;
         // file:MetaData[] readDirResults = check file:readDir(baseDirectory);
+        outResponse.setHeader("access-control-allow-", "*");
         outResponse.setHeader(http:CACHE_CONTROL, "max-age=86400");
         // outResponse.setFileAsPayload("/Users/avishkaariyaratne/Desktop/github/ballerina-samples/file_server/tests/fileDownload/img.png", mime:IMAGE_PNG);
         outResponse.setFileAsPayload(baseDirectory + fileName, mime:IMAGE_JPEG);
         return outResponse;
     }
 
-    resource function post imageUpload(http:Caller caller, http:Request request) returns http:Ok|error? {
+    resource function post imageUpload(http:Request request) returns http:Ok|error? {
         http:Request clientRequest = new;
         string uuidString = uuid:createType4AsString();
         stream<byte[], io:Error?> streamer = check request.getByteStream();
         string fileName = uuidString + ".jpg";
-
         check io:fileWriteBlocksFromStream(baseDirectory + fileName, streamer);
         http:Ok okResponse = {
             body: {
@@ -82,7 +57,7 @@ service /files on new http:Listener(9090) {
 
     }
 
-    resource function delete imageDelete(http:Caller caller, http:Request request) returns 
+    resource function delete imageDelete(http:Request request) returns 
     http:Ok|http:BadRequest|http:InternalServerError|error? {
         string? fileName = request.getQueryParamValue("fileName");
         if (fileName is ()) {
